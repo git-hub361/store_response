@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>For My Crush ❤️</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Arial', cursive;
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+        
+        /* Background Slideshow */
+        .bg-slideshow {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        .bg-slideshow img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            opacity: 0;
+            transition: opacity 2s;
+        }
+        
+        /* Quote Box */
+        .quote {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-size: 34px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+        
+        /* Modal (Pop-up) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 192, 203, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            z-index: 100;
+            text-align: center;
+            width: 80%;
+            max-width: 600px;
+            font-size: 34px;
+            opacity:inherit;
+        }
+        .modal input, .modal textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ff6b9d;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        .modal button {
+            background: #ff6b9d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .modal button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        /* Music Player Button */
+        .music-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .music-btn img {
+            width: 30px;
+            height: 30px;
+        }
+        
+        /* Unmute Overlay */
+        .unmute-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        /* Loading indicator */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #ff6b9d;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+     #userMessage , #userName{
+        height: 60px;
+        width: 100%;
+        font-size: 40px;
+     }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Images (Slideshow) -->
+    <div class="bg-slideshow">
+        <img src="./images/image copy.png" class="active">
+        <img src="./images/image.png">
+        <img src="./images/image2.png">
+        <img src="./images/image copy 2.png">
+    </div>
+    
+    <!-- Random Quotes -->
+    <div class="quote" id="quote"></div>
+    
+    <!-- Welcome Modal -->
+    <div class="modal" id="welcomeModal">
+        <h2>Welcome to My Heart ❤️</h2>
+        <p>Please tell me something sweet...</p>
+        <input type="text" id="userName" placeholder="Your name">
+        <textarea id="userMessage" placeholder="Your message for me..."></textarea>
+        <div>
+            <button onclick="submitResponse()" id="submitBtn">Send Love 💌</button>
+            <button onclick="closeWelcomeModal()">Maybe Later</button>
+        </div>
+    </div>
+    
+    <!-- Original Pop-up Modal -->
+    <div class="modal" id="modal">
+        <h2>How much does Maahru belong to you?</h2>
+        <button onclick="closeModal()">100% ❤️</button>
+        <button onclick="closeModal()">More than anyone knows! 😘</button>
+    </div>
+    
+    <!-- Music Button (Toggle Play/Pause) -->
+    <button class="music-btn" id="musicBtn" onclick="toggleMusic()">
+        <img src="https://cdn-icons-png.flaticon.com/512/3669/3669483.png" id="musicIcon">
+    </button>
+    
+    <!-- Background Music (Loop) -->
+    <audio id="bgMusic" loop>
+        <source src="videoplayback.mp3" type="audio/mpeg">
+        Your browser does not support audio.
+    </audio>
+    
+    <!-- Unmute Overlay (Disappears after first click) -->
+    <div class="unmute-overlay" id="unmuteOverlay">
+        <div>
+            <p>Click anywhere to unlock music ❤️</p>
+        </div>
+    </div>
+    
+    <script>
+        // ====== Configuration ======
+        // Replace with your actual Supabase project details
+        const SUPABASE_URL = 'https://your-project-id.supabase.co';
+        const SUPABASE_ANON_KEY = 'your-anon-key';
+        const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/store_response`;
+        
+        // ====== 1. Background Slideshow ======
+        let images = document.querySelectorAll('.bg-slideshow img');
+        let current = 0;
+        
+        function changeBackground() {
+            images[current].style.opacity = 0;
+            current = (current + 1) % images.length;
+            images[current].style.opacity = 1;
+            setTimeout(changeBackground, 5000); // Change every 5 sec
+        }
+        setTimeout(changeBackground, 5000);
+        
+        // ====== 2. Random Quotes ======
+        const quotes = [
+            "Your smile is my favorite thing in the world. 😊",
+            "Every moment with you feels like magic. ✨",
+            "You're the reason I believe in love. ❤️",
+            "Maahru, you're more beautiful than the stars. 🌟",
+            "I could get lost in your eyes forever. 👀"
+        ];
+        
+        function showRandomQuote() {
+            const quoteBox = document.getElementById('quote');
+            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+            quoteBox.textContent = randomQuote;
+            setTimeout(showRandomQuote, 7000); // Change every 7 sec
+        }
+        showRandomQuote();
+        
+        // ====== 3. Pop-up Modal (Appears after 15 sec) ======
+        setTimeout(() => {
+            document.getElementById('modal').style.display = 'block';
+        }, 15000);
+        
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+        
+        // ====== 4. Welcome Modal (Appears first) ======
+        document.getElementById('welcomeModal').style.display = 'block';
+        
+        function closeWelcomeModal() {
+            document.getElementById('welcomeModal').style.display = 'none';
+        }
+        
+        // ====== 5. Submit Response to Supabase Function ======
+        async function submitResponse() {
+            const name = document.getElementById('userName').value.trim();
+            const message = document.getElementById('userMessage').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (!name || !message) {
+                alert("Please fill in both fields!");
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="loading"></div> Sending...';
+            
+            try {
+                const response = {
+                    name: name,
+                    message: message,
+                    timestamp: new Date().toISOString(),
+                    user_agent: navigator.userAgent
+                };
+                
+                // Call Supabase Edge Function
+                const apiResponse = await fetch("https://phgpwenqbuqerwolmqhv.supabase.co/functions/v1/store_response", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify(response)
+                });
+                
+                const result = await apiResponse.json();
+                
+                if (result.success) {
+                    console.log('Message saved successfully:', result.data);
+                    closeWelcomeModal();
+                    alert("Thank you for your sweet words! Your message has been saved to my heart! ❤️");
+                } else {
+                    console.error('API error:', result.error);
+                    alert(`There was an error saving your message: ${result.error} 💔`);
+                }
+                
+            } catch (error) {
+                console.error('Network error:', error);
+                alert('There was an error connecting to the server. Please check your internet connection! 💔');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Send Love 💌';
+            }
+        }
+        
+        // ====== 6. Music Controls ======
+        const bgMusic = document.getElementById('bgMusic');
+        const musicBtn = document.getElementById('musicBtn');
+        const musicIcon = document.getElementById('musicIcon');
+        const unmuteOverlay = document.getElementById('unmuteOverlay');
+        
+        // Initialize music (muted)
+        bgMusic.muted = true;
+        bgMusic.play().catch(e => console.log("Auto-play blocked (will work after click)"));
+        
+        // Unmute on first interaction
+        document.addEventListener('click', () => {
+            bgMusic.muted = false;
+            unmuteOverlay.style.display = 'none';
+            try {
+                bgMusic.play();
+            } catch (e) {
+                console.log("Playback error:", e);
+            }
+        }, { once: true });
+        
+        // Toggle play/pause
+        function toggleMusic() {
+            if (bgMusic.paused) {
+                bgMusic.play();
+                musicIcon.src = "https://cdn-icons-png.flaticon.com/512/3669/3669483.png"; // Play icon
+            } else {
+                bgMusic.pause();
+                musicIcon.src = "https://cdn-icons-png.flaticon.com/512/7960/7960808.png"; // Pause icon
+            }
+        }
+    </script>
+</body>
+</html>
